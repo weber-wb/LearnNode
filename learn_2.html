@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Learn Node 基本模块</title>
+</head>
+<body>
+    
+    <!-- 
+        Node.js 是运行在 服务区端的JavaScript环境，服务器程序和浏览器程序相比，最大的特点就是没有浏览器的安全限制，而且服务器程序必须能接收网络请求，读写文件，处理二进制内容，所以：
+        Node.js 内置常用模块就是为了实现基本的服务器功能。这些模块在浏览器环境中是无法被执行的，因为它们的底层代码使用 c/c++ 在 Node.js 环境中实现的
+
+        global
+            我们知道在JavaScript有且仅有一个全局对象，在浏览器中，叫window对象
+            而在 Node.js 环境中，也有唯一的全局对象，但不叫 window , 而叫 global , 这个对象的属性和方法也和浏览器环境的window不同，进入Node.js交互环境，可直接输入：
+            > node
+            > global console
+        
+            process
+            process 也是 Node.js 提供的一个对象，它代表当前 Node.js 进程。 通过 process 对象可以拿到许多有用的信息：
+            > process === global.process;       // true
+            > process.cwd();            // 返回当前工作目录
+            > process.chdir('/path');       // 切换当前工作目录
+
+            JavaScript程序是由事件驱动执行的单线程模型，Node.js也不例外。
+            Node.js 不断执行响应事件的JavaScript函数，直到没有任何响应事件的函数可以执行是，Node.js就退出了。
+    -->
+    <script>
+        // 如果我们想在下一次事件响应中执行代码，可以调用 process.nextTick()：
+        (function(){        // test.js
+            process.nextTick(function(){
+                console.log('nextTick callback');
+            });
+            console.log('nextTick was set!')
+        });
+        // 用Node执行上面的代码 test.js , 输出：
+        // 'nextTick was set!'
+        // 'nextTick callback'
+        // 这说明传入 process.nextTick() 的函数不是立刻执行，而是要等到下一次事件循环
+
+        // Node.js进程本身的事件就由 process 对象处理。如果我们响应 exit 事件，就可以程序即将退出的时候执行某个回调函数：
+        (function(){
+            process.on('exit',function(code){
+                console.log('about to exit with code: ' + code);
+            })
+        });
+
+        // 判断JavaScript执行环境：常用方式就是根据浏览器和Node环境提供的全局变量名称来判断
+        (function(){
+            if(typeof(window) === 'undefined'){
+                console.log('node.js');
+            }else{
+                console.log('browser');
+            }
+        });
+    </script>
+
+    <!-- 
+        Node.js 内置的 fs 模块就是文件系统模块，负责读写文件
+        和其他的JavaScript模块不同的是，fs模块同时提供了异步和同步的方法
+        同步操作的好处代码简单，缺点是程序讲等待IO操作，在等待时间内无法响应其他任何事件。而异步读取不用等待IO操作，但代码比较麻烦
+
+        按照JavaScript的标准，异步读取一个文本文件的代码如下：
+            'use strict';
+            var fs = require('fs');
+            fs.readFile('sample.txt', 'utf-8', function(err,data){
+                if(err){
+                    console.log(err);
+                } else {
+                    console.log(data);
+                }
+            });
+            异步读取时，传入的回调函数接收两个参数，当正常读取时，error参数为null，data参数为读取到的String，当读取错误时，error参数代表一个错误对象，data为undefined。
+            这也是Node.js标准的回调函数：第一个参数代表错误信息，第二个参数代表结果。后面我们还会经常编写这种回调函数
+            由于error 是否为 null 就是判断是否出错的标志，所以通常的判断逻辑总是：
+            if(err){
+                // 出错
+            } else {
+                // 正常
+            }
+
+            如果读取的文件不是文本文件，而是二进制文件，这么办?
+            var fs = require('fs');
+            fs.readFile('sample.png',function(err,data){
+                if(err){
+                    console.log(err)
+                } else {
+                    console.log(data)
+                }
+            });
+            当读取二进制文件时，不传入文件编码，回调函数的data参数将返回一个Buffer对象
+            在Node.js中，Buffer对象就是一个包含零个或任意个字节的数组（注意和Array不同）。Buffer对象可以和String作转换，例如把一个 Buffer对象转换成String ：
+            var text = data.toString('utf-8');
+            console.log(text);
+
+            或者把一个String转换成Buffer：
+            var buf = Buffer.from(text,'utf-8');
+            console.log(buf);
+
+        同步读取文件
+            除了标准的异步读取模式外，fs也提供相应的同步读取函数。同步读取的函数和异步函数相比，多了一个sync后缀，并且不接收回调函数，函数直接返回结果
+            var fs = require('fs');
+            var data = fs.readFileSync('sample.txt', 'utf-8');
+            console.log(data);
+            
+            如果同步读取文件发生错误，则需要 try...catch 捕获该错误：
+            try{
+                var data = fs.readFileSync('sample.txt', 'utf-8');
+                console.log(data);
+            } catch {
+                // 错误
+            }
+    -->
+
+    <!-- 
+        写文件
+        将数据写入文件是通过 fs.writeFile() 实现的：
+    -->
+    <script>
+        (function(){
+            'use strict';
+            var fs = require('fs');
+            var data = 'Hello, Node.js';
+            fs.writeFile('output.txt', data, function(err){
+                if(err){
+                    console.log(err)
+                }else{
+                    console.log('ok.')
+                }
+            });
+        })
+        // writeFile() 的参数依次为文件名，数据和回调函数。如果传入的数据是String，默认按 UTF-8 编码写入文本文件，如果传入的是 Buffer，则写入的是二进制文件。
+        // 回调函数由于只关心成功与否，因此只需要一个err参数
+
+        // 和readFileSync()类似，writeFile()也有一个同步的方法，叫 writeFileSync();
+        (function(){
+            'use strict';
+            var fs = require('fs');
+            var data = 'Hello, Node.js';
+            fs.writeFileSync('output.txt',data);
+        })
+    </script>
+
+    <!-- 
+        stat
+        如果我们要获取文件大小，创建时间等信息，可以使用fs.stat(),它返回一个stat对象，能告诉我们文件或目录的详细信息：
+    -->
+    <script>
+        (function(){
+            'use strict';
+            var fs = require('fs');
+            fs.stat('sample.txt',function(err,data){
+                if(err){
+                    console.log(err);
+                }else{
+                    console.log(data);
+                }
+            })
+        });
+
+        // stat() 也有一个对应的同步函数 statSync()
+        (function(){
+            'use strict';
+            var fs = require('fs');
+            fs.statSync('sample.txt');
+
+            console.log(fs.statSync('sample.txt'));
+        })
+    </script>
+
+    <!-- 
+        异步还是同步：
+            在fs模块中，提供同步方法是为了方便使用。那我们到底是应该使用异步方法还是同步方法呢？
+            由于Node环境执行的JavaScript代码是服务器端代码，所以，绝大部分需要在服务器运行反复执行业务逻辑的代码，必须使用异步代码，否则，同步代码在执行时期，服务器停止响应，因为JavaScript只有一个执行线程。
+
+            服务器启动时如果需要读取配置文件，或者结束时需要写入到状态文件时，可以使用同步代码，因为这些代码只在启动和结束时执行一次，不影响服务器正常运行时的异步执行。
+     -->
+</body>
+</html>
